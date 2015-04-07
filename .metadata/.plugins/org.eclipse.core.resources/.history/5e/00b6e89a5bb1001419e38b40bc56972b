@@ -1,0 +1,100 @@
+package server;
+
+import javax.swing.JFrame;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Toolkit;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JList;
+import javax.swing.JPanel;
+
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+
+public class BanListEdit extends JFrame {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private ArrayList<String> bannedUsers = new ArrayList<String>();
+	private JList<Object> list;
+	private DefaultListModel<Object> listModel;
+	
+	public BanListEdit(final ChatServer cs) {
+		setTitle("Ban List");
+		getContentPane().setLayout(new BorderLayout(0, 0));
+		int height = 500;
+		int width = 300;
+		Dimension d = Toolkit.getDefaultToolkit().getScreenSize();
+		setBounds((d.width - width)/2, (d.height - height)/2, width, height);
+		try {
+			BufferedReader in = new BufferedReader(new FileReader (new File ("./data/banned.txt")));
+			String line;
+			while ((line = in.readLine()) != null) {
+				bannedUsers.add(line);
+			}
+			in.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		listModel = new DefaultListModel<>();
+		
+		list = new JList<Object>(listModel);
+		getContentPane().add(list, BorderLayout.CENTER);
+		
+		JPanel panel = new JPanel();
+		getContentPane().add(panel, BorderLayout.SOUTH);
+		panel.setLayout(new BorderLayout(0, 0));
+		
+		JButton btnDeban = new JButton("rehabilitate");
+		btnDeban.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				int l = list.getSelectedIndex();
+				if (l > -1) {
+					bannedUsers.remove(l);
+					saveNewBannedList(bannedUsers);
+					FillModelList(bannedUsers);
+					cs.rehabilitate(list.getSelectedValue().toString());
+				}
+			}
+		});
+		panel.add(btnDeban, BorderLayout.EAST);
+		FillModelList(bannedUsers);
+	}
+	
+	public void saveNewBannedList (ArrayList<String> users) {
+		try {
+			BufferedWriter bw = new BufferedWriter(new FileWriter(new File ("./data/banned.txt")));
+			for (String string : users) {
+				bw.append(string);
+				bw.newLine();
+			}
+			bw.flush();
+			bw.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void FillModelList (ArrayList<String> users) {
+		this.listModel.clear();
+		for (String s : users) {
+			this.listModel.addElement(s);
+		}
+		repaint();
+	}
+	
+}

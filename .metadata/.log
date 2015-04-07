@@ -1,0 +1,12 @@
+!SESSION 2015-02-13 00:09:31.752 -----------------------------------------------
+eclipse.buildId=debbuild
+java.version=1.7.0_75
+java.vendor=Oracle Corporation
+BootLoader constants: OS=linux, ARCH=x86, WS=gtk, NL=en_US
+Command-line arguments:  -os linux -ws gtk -arch x86
+
+This is a continuation of log file /home/anastasia/workspace_pi/.metadata/.bak_0.log
+Created Time: 2015-02-13 00:09:45.268
+
+!ENTRY org.eclipse.ui 2 2 2015-02-13 00:09:45.268
+!MESSAGE Invalid property category path: ValidationPropertiesPage (bundle: org.eclipse.wst.xml.ui, propertyPage: org.eclipse.wst.xml.ui.propertyPage.project.validation)

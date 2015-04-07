@@ -1,0 +1,28 @@
+package client;
+
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
+import java.awt.BorderLayout;
+import javax.swing.JList;
+import javax.swing.JButton;
+
+public class PrivateChatList extends JFrame {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public PrivateChatList() {
+		getContentPane().setLayout(new BorderLayout(0, 0));
+		
+		JScrollPane scrollPane = new JScrollPane();
+		getContentPane().add(scrollPane, BorderLayout.CENTER);
+		
+		JList list = new JList();
+		scrollPane.setViewportView(list);
+		
+		JButton openButton = new JButton("start private dialog");
+		getContentPane().add(openButton, BorderLayout.SOUTH);
+	}
+
+}

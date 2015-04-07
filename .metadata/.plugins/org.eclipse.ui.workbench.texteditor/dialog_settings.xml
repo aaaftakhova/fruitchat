@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item value="330" key="DIALOG_WIDTH"/>
+		<item value="99" key="DIALOG_Y_ORIGIN"/>
+		<item value="923" key="DIALOG_X_ORIGIN"/>
+		<item value="512" key="DIALOG_HEIGHT"/>
+		<item value="1|Ubuntu|11.0|0|GTK|1|" key="DIALOG_FONT_NAME"/>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item value="true" key="wrap"/>
+		<item value="false" key="casesensitive"/>
+		<item value="false" key="isRegEx"/>
+		<item value="false" key="incremental"/>
+		<item value="false" key="wholeword"/>
+		<item value="changeRoomTo" key="selection"/>
+		<list key="findhistory">
+			<item value="changeRoomTo"/>
+			<item value="mntmShowBanList"/>
+			<item value="e.print"/>
+			<item value="e."/>
+			<item value="setAccOffl"/>
+			<item value="handleAcc"/>
+			<item value="changeRoom"/>
+			<item value="change"/>
+		</list>
+		<list key="replacehistory">
+			<item value="mntmDeleteUser"/>
+			<item value="mntmPrivateChat"/>
+			<item value="contentPane"/>
+			<item value="server.getDefaultRoomName()"/>
+			<item value="defaultRoomName"/>
+			<item value="btnSendButton"/>
+		</list>
+	</section>
+</section>

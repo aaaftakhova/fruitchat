@@ -1,0 +1,33 @@
+package client;
+
+import javax.swing.DefaultListModel;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import java.awt.BorderLayout;
+import javax.swing.JList;
+import javax.swing.JButton;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+
+public class PrivateChatList extends JDialog {
+	public PrivateChatList(DefaultListModel<String> onlineUsers) {
+		getContentPane().setLayout(new BorderLayout(10, 10));
+		
+		JScrollPane scrollPane = new JScrollPane();
+		getContentPane().add(scrollPane, BorderLayout.CENTER);
+		
+		JList list = new JList(onlineUsers);
+		scrollPane.setViewportView(list);
+		
+		JButton btnOpenPrivateDialog = new JButton("open private dialog");
+		getContentPane().add(btnOpenPrivateDialog, BorderLayout.SOUTH);
+	}
+	
+
+}
+
+public static String getUser(DefaultListModel<String> OnlineUsersList) {
+	PrivateChatList list = new PrivateChatList(OnlineUsersList);
+}

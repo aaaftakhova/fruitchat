@@ -1,0 +1,385 @@
+package client;
+
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Toolkit;
+
+import javax.imageio.ImageIO;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
+import javax.swing.JButton;
+import javax.swing.JPopupMenu;
+import javax.swing.JTextField;
+import javax.swing.JTextArea;
+import javax.swing.DefaultListModel;
+import javax.swing.JTabbedPane;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JScrollPane;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JMenu;
+import javax.swing.GroupLayout;
+import javax.swing.GroupLayout.Alignment;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.LayoutStyle.ComponentPlacement;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.IOException;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.Insets;
+import javax.swing.ScrollPaneConstants;
+import java.awt.Rectangle;
+import javax.swing.ListSelectionModel;
+
+public class ClientFrame extends JFrame {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8583207366664238759L;
+	private JPanel contentPane;
+	private JTextField textField;
+	private JPanel input_panel;
+	private JTextArea textArea = new JTextArea();
+	private String inputText;
+	private boolean newInput = false;
+	private DefaultListModel<String> userListModel = new DefaultListModel<String>();
+	private DefaultListModel<String> roomListModel = new DefaultListModel<String>();
+	private JList<String> roomList = new JList<String>(roomListModel);
+	private JList<String> userList = new JList<String>(userListModel);
+	private ChatClient cc;
+	private String login = "";;
+	private JPanel chatLog_panel;
+	private JLabel chatLoginLabel;
+	private JLabel chatRoomLabel;
+	private JLabel chatClientStateLabel;
+	private String currentRoom;
+	protected int popupIndex;
+
+	/**
+	 * Create the frame.
+	 */
+	public ClientFrame(final ChatClient c) {
+		setMinimumSize(new Dimension(400, 250));
+		setTitle("Chat");
+		this.cc = c;
+		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		int dx = 600;
+		int dy = 400;
+		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+		setBounds((dim.width - dx) / 2, (dim.height - dy) / 2, dx, dy);
+		try {
+			setIconImage(ImageIO.read(new File("./data/gfx/fruitchat.ico")));
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		JMenuBar menuBar = new JMenuBar();
+		setJMenuBar(menuBar);
+
+		JMenu mnAction = new JMenu("Action");
+		menuBar.add(mnAction);
+
+		JMenuItem mntmGetConnectionInfo = new JMenuItem("Get connection info");
+		mntmGetConnectionInfo.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				displayText("You are logged in as: " + login);
+			}
+		});
+		mnAction.add(mntmGetConnectionInfo);
+		
+		//TODO "delete my account"
+		//TODO "connect..." option, which tries to set up connection with server if user was sent offline/banned
+		//(imitate "press button" on loginFrame(which is invisible) - all required input data should still be there)
+		
+		//TODO "private chat" option, which shows the list of all online users in extra window and opens a private chat with a selected one
+		
+		//TODO "add to black list" option, which shows the list of all online users in extra window and adds selected user to your black list
+		
+		contentPane = new JPanel();
+		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+		setContentPane(contentPane);
+		contentPane.setLayout(new BorderLayout(0, 0));
+
+		chatLog_panel = new JPanel();
+		chatLog_panel.setBorder(new EmptyBorder(5, 5, 5, 5));
+		contentPane.add(chatLog_panel, BorderLayout.CENTER);
+		chatLog_panel.setLayout(new BorderLayout(0, 0));
+
+		JScrollPane scrollPane = new JScrollPane();
+		scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+		chatLog_panel.add(scrollPane);
+		textArea.setMinimumSize(new Dimension(150, 50));
+		textArea.setMargin(new Insets(2, 2, 2, 2));
+		textArea.setEditable(false);
+		textArea.setTabSize(0);
+
+		textArea.setLineWrap(true);
+		scrollPane.setViewportView(textArea);
+
+		input_panel = new JPanel();
+		input_panel.setBorder(new EmptyBorder(5, 5, 5, 5));
+		input_panel.setPreferredSize(new Dimension(10, 35));
+		contentPane.add(input_panel, BorderLayout.SOUTH);
+
+		final JButton btnSendButton = new JButton("Send");
+		btnSendButton.setPreferredSize(new Dimension(190, 25));
+		btnSendButton.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if (e.getKeyCode() == 10 && login != null) {
+					btnSendButton.doClick();
+				}
+			}
+		});
+		btnSendButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				inputText = textField.getText();
+				if (login != null && inputText.length() > 0) {
+					newInput = true;
+					cc.sendDataString("[" + login + "]: " + inputText);
+				}
+				textField.setText("");
+			}
+		});
+		input_panel.setLayout(new BorderLayout(0, 0));
+		
+		JPanel textFieldContainer = new JPanel();
+		textFieldContainer.setBorder(new EmptyBorder(0, 0, 0, 10));
+		input_panel.add(textFieldContainer, BorderLayout.CENTER);
+				textFieldContainer.setLayout(new BorderLayout(0, 0));
+		
+				textField = new JTextField();
+				textFieldContainer.add(textField);
+				textField.addKeyListener(new KeyAdapter() {
+					@Override
+					public void keyPressed(KeyEvent e) {
+						if (e.getKeyCode() == 10 && login != null) {
+							btnSendButton.doClick();
+						}
+					}
+				});
+		textField.setColumns(10);
+		input_panel.add(btnSendButton, BorderLayout.EAST);
+
+		JPanel user_room_panel = new JPanel();
+		user_room_panel.setPreferredSize(new Dimension(200, 10));
+		user_room_panel.setBorder(new EmptyBorder(5, 5, 5, 5));
+		contentPane.add(user_room_panel, BorderLayout.EAST);
+		user_room_panel.setLayout(new BorderLayout(10, 0));
+
+		JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
+		user_room_panel.add(tabbedPane);
+
+		JPanel users_tab = new JPanel();
+		tabbedPane.addTab("Users", null, users_tab, null);
+		users_tab.setLayout(new BorderLayout(0, 0));
+		
+		JScrollPane scrollPane_users = new JScrollPane();
+		users_tab.add(scrollPane_users, BorderLayout.CENTER);
+			userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+			userList.setMinimumSize(new Dimension(200, 50));
+			scrollPane_users.setViewportView(userList);
+	
+			userList.addListSelectionListener(new ListSelectionListener() {
+				public void valueChanged(ListSelectionEvent arg0) {
+					if (userList.getSelectedIndex() > -1) {
+						String selectedUser = userList.getSelectedValue().toString();
+						textField.setText(selectedUser + ", ");
+						textField.requestFocus();
+					}				
+				}
+			});
+
+		JPanel rooms_tab = new JPanel();
+		tabbedPane.addTab("Rooms", null, rooms_tab, null);
+		rooms_tab.setLayout(new BorderLayout(0, 0));
+		roomList.setMinimumSize(new Dimension(200, 50));
+		roomList.addListSelectionListener(new ListSelectionListener() {
+			public void valueChanged(ListSelectionEvent arg0) {
+				if (roomList.getSelectedIndex() > -1) {
+					String room = roomList.getSelectedValue().toString();
+					room = room.substring(0, room.indexOf("("));
+					
+					
+					cc.sendDataString("[" + login + "]: /changeRoom " + room);
+				}
+			}
+		});
+		
+		JScrollPane scrollPane_rooms = new JScrollPane();
+		rooms_tab.add(scrollPane_rooms, BorderLayout.CENTER);
+
+		scrollPane_rooms.setViewportView(roomList);
+
+		JPanel info_panel = new JPanel();
+		info_panel.setBorder(new EmptyBorder(2, 10, 2, 10));
+		contentPane.add(info_panel, BorderLayout.NORTH);
+
+		chatLoginLabel = new JLabel("Login: ");
+		//TODO
+		chatRoomLabel = new JLabel("Room: ");
+
+		chatClientStateLabel = new JLabel("State: offline");
+		GroupLayout gl_info_panel = new GroupLayout(info_panel);
+		gl_info_panel.setHorizontalGroup(gl_info_panel
+				.createParallelGroup(Alignment.LEADING)
+				.addGroup(
+						gl_info_panel
+								.createSequentialGroup()
+								.addComponent(chatLoginLabel,
+										GroupLayout.PREFERRED_SIZE, 251,
+										GroupLayout.PREFERRED_SIZE)
+								.addPreferredGap(ComponentPlacement.RELATED)
+								.addComponent(chatRoomLabel,
+										GroupLayout.DEFAULT_SIZE, 291,
+										Short.MAX_VALUE).addContainerGap())
+				.addComponent(chatClientStateLabel, GroupLayout.DEFAULT_SIZE,
+						560, Short.MAX_VALUE));
+		gl_info_panel.setVerticalGroup(gl_info_panel.createParallelGroup(
+				Alignment.LEADING).addGroup(
+				gl_info_panel
+						.createSequentialGroup()
+						.addGroup(
+								gl_info_panel
+										.createParallelGroup(Alignment.LEADING)
+										.addComponent(chatLoginLabel)
+										.addComponent(chatRoomLabel,
+												Alignment.TRAILING))
+						.addPreferredGap(ComponentPlacement.RELATED,
+								GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+						.addComponent(chatClientStateLabel)));
+		info_panel.setLayout(gl_info_panel);
+		
+		JPopupMenu popup = new JPopupMenu();
+		JMenuItem item = new JMenuItem("private message");
+		item.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (popupIndex > -1) {
+					String user = userListModel.getElementAt(popupIndex);
+					if (textField.isEditable()) {
+						c.openPrivateDialog(user);
+					}
+				}
+			}
+		});
+		popup.add(item);
+		addPopup(popup);		
+	}
+
+	public void displayText(String text) {
+		textArea.append(text + "\n");
+	}
+
+	public boolean isSent() {
+		return newInput;
+	}
+
+	public void messageSent() {
+		newInput = false;
+	}
+
+	public String getInputText() {
+		return inputText;
+	}
+
+	public void update(String[] userArray, String[] roomArray) {
+
+		userListModel.clear();
+		roomListModel.clear();
+
+		// get current user location
+		for (String string : userArray) {
+			if (string.startsWith(login)) {
+				currentRoom = string.split(" ")[2];
+				currentRoom = currentRoom
+						.substring(0, currentRoom.length() - 1);
+			}
+		}
+		// show location to user
+		chatRoomLabel.setText("Room: " + currentRoom);
+
+		// filter user list
+		for (String string : userArray) {
+			String offOn = string.split(" ")[1];
+			offOn = offOn.substring(1, offOn.length() - 1);
+			String room = string.split(" ")[2];
+			room = room.substring(0, room.length() - 1);
+			if (offOn.equals("online") && currentRoom.equals(room)) {
+				userListModel.addElement(string.substring(0,
+						string.indexOf(" ")));
+			}
+		}
+
+		// update room list
+		for (String string : roomArray) {
+			roomListModel.addElement(string);
+		}
+
+		roomList.repaint();
+		userList.repaint();
+	}
+
+	public void setLogin(String login) {
+		this.login = login;
+		this.setTitle("ChatClient: " + login);
+		chatLoginLabel.setText("Login: " + login);
+		chatLoginLabel.repaint();
+	}
+
+	public void setState(String string) {
+		chatClientStateLabel.setText("State: " + string);
+	}
+	@Override public void dispose(){
+		if (cc != null) {
+			cc.sendDataString("["+login+"]: "+ "/quit");
+		}
+		System.exit(0);
+	}
+
+	public String getLogin() {
+		return login;
+	}
+
+	public void setMessaging(boolean value) {
+		textField.setEditable(value);
+	}
+	
+	private void addPopup( final JPopupMenu popup) {
+		userList.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				if (e.isPopupTrigger()) {
+					popupIndex = userList.locationToIndex(e.getPoint());
+					showMenu(e);
+				}
+			}
+			public void mouseReleased(MouseEvent e) {
+				if (e.isPopupTrigger()) {
+					showMenu(e);
+				}
+			}
+			private void showMenu(MouseEvent e) {
+				popup.show(e.getComponent(), e.getX(), e.getY());
+			}
+		});
+	}
+
+	public void closeChatClient() {
+		try {
+			cc.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+}
+
+

@@ -1,0 +1,504 @@
+package server;
+
+import java.io.*;
+import java.net.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.io.File;
+import java.io.IOException;
+
+import core.Account;
+import core.Room;
+
+
+public class ChatServer implements Runnable {
+	ServerSocket server;
+	private boolean stop = false;
+	private PrintWriter pWriter = null;
+	ArrayList<Account> accounts = new ArrayList<Account>();
+	ArrayList<Room> rooms = new ArrayList<Room>();
+	ChatServerView gui = null;
+
+	public ChatServer(ChatServerView chatServerView) throws IOException {
+		server = new ServerSocket(21284);
+		this.gui = chatServerView;
+	}
+
+	public ChatServer() throws IOException {
+		server = new ServerSocket(21284);
+	}
+
+	public void run() {
+		//read rooms, add rooms
+		File file = new File("./data/rooms.txt"); 
+
+        if (file.canRead() && file.isFile()) {
+        	FileReader fr = null; 
+	        int c; 
+	        StringBuffer buff = new StringBuffer(); 
+	        try { 
+	            fr = new FileReader(file); 
+	            while ((c = fr.read()) != -1) { 
+	                buff.append((char) c); 
+	            } 
+	            fr.close(); 
+
+	        } catch (IOException e) { 
+	            e.printStackTrace(); 
+	        } 
+
+	        String data = buff.toString();
+	        if (data.length() > 0) {
+	        	String dataAccs[] = data.split("\n");
+	        	for (String r : dataAccs) {
+	        		rooms.add(new Room (r));
+				}
+	        }
+        }
+		
+		//read accounts.txt
+		//fill in accounts
+		
+		file = new File("./data/accounts.txt"); 
+
+	        if (file.canRead() && file.isFile()) {
+	        	FileReader fr = null; 
+		        int c; 
+		        StringBuffer buff = new StringBuffer(); 
+		        try { 
+		            fr = new FileReader(file); 
+		            while ((c = fr.read()) != -1) { 
+		                buff.append((char) c); 
+		            } 
+		            fr.close(); 
+
+		        } catch (IOException e) { 
+		            e.printStackTrace(); 
+		        } 
+
+		        String data = buff.toString();
+		        if (data.length() > 0) {
+		        	String dataAccs[] = data.split("\n");
+		        	for (String s : dataAccs) {
+		        		String[] splitted = s.split(" ");
+		        		String password = splitted[1];
+		        		String login = splitted[0];
+		        		accounts.add(new Account(login, password));
+					}
+		        }
+	        }
+		//
+		
+		if (gui == null) {
+			System.out.println("[server]: start erfolgreich");
+		} else {
+			gui.addLog("[server]: Start erfolgreich!");
+			gui.FillRoomsList(rooms);
+			gui.FillBenutzerList(accounts);
+		}
+		while (!stop) {
+			ChatServerThread serverThread;
+			try {
+				serverThread = new ChatServerThread(this, server.accept());
+				serverThread.start();
+
+			} catch (IOException e) {
+			}
+		}
+		if (gui == null) {
+			System.out.println("Server beendet");
+		} else {
+			gui.addLog("[server]: Server beendet.");
+		}
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		Thread t = new Thread(new ChatServer());
+		t.start();
+
+		t.interrupt();
+	}
+
+	public void setStop() {
+		stop = true;
+		try {
+			server.close();
+		} catch (IOException e) {
+		}
+	}
+
+	public int handleAccount(String login, String password, ChatServerThread cst) {
+		int res;		
+		// check if banned
+		File file = new File("./data/banned.txt"); 
+
+        if (file.canRead() && file.isFile()) {
+        	FileReader fr = null; 
+	        int c; 
+	        StringBuffer buff = new StringBuffer(); 
+	        try { 
+	            fr = new FileReader(file); 
+	            while ((c = fr.read()) != -1) { 
+	                buff.append((char) c); 
+	            } 
+	            fr.close(); 
+
+	        } catch (IOException e) { 
+	            e.printStackTrace(); 
+	        } 
+
+	        String dataAccs[] = buff.toString().split("\n");
+        	for (String s : dataAccs) {
+        		if (s.equals(login)) {
+	        			//banned
+        				if (gui != null) {
+        					gui.addLog("log-in attempt: user: " + login + ": banned");
+        				}
+	        			return 3;
+	        	}
+        	}
+        }
+		
+		for (Account account : accounts) {
+			if (login.equals(account.getLogin())) {
+				if (password.equals(account.getPassword())) {
+					// alles richtig
+					
+					//check if schon angemeldet
+					if (account.isOnline()) {
+						//melde den anderen ab
+						this.accMessage(login, "[server]: /off");
+						this.setAccOffline(login);
+					}
+					
+					//anmelden
+					account.setCST(cst);
+					account.setOnline(true);
+					cst.setAccount(account);
+					
+					res = account.setRoom("default", this.rooms);
+					if (gui != null) {
+						gui.addLog("log-in: user: " + login);
+						gui.FillBenutzerList(accounts);
+						gui.FillRoomsList(rooms);
+					}
+					return res;
+				} else {
+					// password falsch
+					if (gui!= null) {
+						gui.addLog("log-in attempt: user: " + login + " : false password");
+					}
+					return 1;
+				}
+			}
+		}
+		
+		// neues account erstellen
+		accounts.add(new Account(login, password, cst, this.rooms));
+		//update accounts.txt
+		try {
+			pWriter = new PrintWriter(new FileWriter("./data/accounts.txt", true));
+			pWriter.println(login + " " + password);			
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (pWriter != null) {
+				pWriter.close();
+			}
+		}
+		//inform gui
+		if (gui != null) {
+			gui.addLog("sign-in: user: " + login);
+			gui.FillBenutzerList(accounts);
+			gui.FillRoomsList(rooms);
+		}
+		return 2;
+	}
+
+	public String getOnlineAccountsList() {
+		ArrayList<String> onlineAccs = new ArrayList<String>();
+		for (Account account : this.accounts) {
+			if (account.getCST() != null) {
+				onlineAccs.add(account.getLogin());
+			}
+		}
+		String onlineAccsList = "Online:\n";
+		for (String accName : onlineAccs) {
+			onlineAccsList += accName + "\n";
+		}
+		onlineAccsList += "ChatFlow:\n";
+		return onlineAccsList;
+	}
+
+	public void createNewRoom(String room) {
+		if (room.length() > 0 && !room.equals("default")) {
+		
+			for (Room r : rooms) {
+				if(r.getName().equals(room))
+					return;
+			}
+			//update room.txt
+			try {
+				pWriter = new PrintWriter(new FileWriter("./data/rooms.txt", true));
+				pWriter.println(room);			
+			} catch (IOException e) {
+				e.printStackTrace();
+			} finally {
+				if (pWriter != null) {
+					pWriter.close();
+				}
+			}
+			//add to working roomList
+			rooms.add(new Room(room));
+			
+			if (gui != null) {
+				gui.addLog("room created: "+ room);
+				gui.FillRoomsList(rooms);
+			}
+			this.sendUpdates();
+		}
+		
+	}
+
+	public void changeRoomTo(String room, Account acc) {
+		if (room.equals(acc.getRoom())) return;
+		int response = acc.setRoom(room, rooms);
+		if (response == 0) {
+			if (gui != null) {
+				gui.FillBenutzerList(this.accounts);
+				gui.FillRoomsList(rooms);
+			}
+		}
+		this.sendUpdates();
+	}
+
+	public void publicMessage(String message) {
+		
+		if (gui != null)
+			gui.addLog("to all => " + message);
+		for (Account account : accounts) {
+			if (account.getCST() != null) {
+				ChatServerThread cst = account.getCST();
+				cst.sendDataString(message);
+			}
+		}
+	}
+	
+	public void roomMessage(String message, String room) {
+		if (gui != null) {
+			gui.addLog(room + " => " + message);
+		}
+		for (Account account: accounts) {
+			if (account.getCST() != null && room.equals(account.getRoom())) {
+				ChatServerThread cst = account.getCST();
+				cst.sendDataString(message);
+			}
+		}
+	}
+	
+	public void accMessage (String login, String message) {
+		if (gui != null && !message.startsWith("[private]:")) {
+			gui.addLog(message);
+		}
+		for (Account account: accounts) {
+			if (account.getCST() != null && login.equals(account.getLogin())) {
+				ChatServerThread cst = account.getCST();
+				cst.sendDataString(message);
+			}
+		}
+	}
+
+	public void setAccOffline(String login) {
+		for (Account account : accounts) {
+			if (account.getLogin().equals(login)) {
+				if (!account.isOnline()) return;
+				//remove it from rooms
+				String room = account.getRoom();
+				for (Room r : rooms) {
+					if(r.getName().equals(room) ){
+						r.removeUser();
+						account.setOnline(false);
+						break;
+					}
+				}
+				
+				if (gui!= null) {
+					gui.FillBenutzerList(accounts);
+					gui.FillRoomsList(rooms);
+				}
+				
+				//disable messaging
+				try {
+					account.getCST().client.close();
+				} catch (IOException e) {
+					//connection already dead
+				}
+				account.setCST(null);
+				
+				this.sendUpdates();
+				this.publicMessage("[server]: \"" + login + "\"went offline...\n");
+				return;
+			}
+		}
+	}
+
+	public int renameRoom (String oldName, String newName) {
+		if (!oldName.equals("default") && !newName.equals("default") && !oldName.equals(newName)) {
+			//check if there is already room with such name
+			for (Room r : rooms) {
+				if (r.getName().equals(newName)) {
+					//there is already room with such name, inform user
+					return 1;
+				}
+			}
+			for (Room r : rooms) {
+				if (r.getName().equals(oldName)) {
+					r.setName(newName);
+					if (gui != null) {
+						gui.FillRoomsList(rooms);
+					}
+					if (gui != null) {
+						gui.addLog("room renamed: " + oldName + " to: " + newName);
+					}
+					this.sendUpdates();
+					
+					//update room.txt
+					try {
+						pWriter = new PrintWriter(new FileWriter("./data/rooms.txt"));
+						for (Room room : rooms) {
+							pWriter.println(room.getName());
+						}
+					} catch (IOException e) {
+						e.printStackTrace();
+					} finally {
+						if (pWriter != null) {
+							pWriter.close();
+						}
+					}
+					
+					return 0;
+				}
+			}
+		}
+		return 0;
+	}
+	
+	public String updateInfos () {
+		//update userlist
+		String userList = "";
+		for (Account acc : accounts) {
+			userList += ";"+acc.toString();
+		}
+		if (userList.length() > 0) {
+			userList=userList.substring(1);
+		}
+		//update roomlist
+		String roomList = "";	
+		for (Room r : rooms) {
+			roomList += ";"+r.getRoomString() ;
+		}
+		if (roomList.length() > 0) {
+			roomList = roomList.substring(1);
+		}
+		return userList + "/" + roomList; 
+	}
+	
+	public void sendUpdates () {
+		String data = this.updateInfos(); 
+		this.publicMessage("[server]: /update " + data);
+	}
+
+	public void deleteRoom(String room) {
+		if (!room.equals("default")) {
+			for (Room r : rooms) {
+				if (r.getName().equals(room)) {
+					for (Account acc : accounts) {
+						if (acc.getRoom().equals(room)) {
+							acc.setRoom("default", rooms);
+						}
+					}
+					rooms.remove(rooms.indexOf(r));
+					
+					//update room.txt
+					try {
+						pWriter = new PrintWriter(new FileWriter("./data/rooms.txt"));
+						for (Room raum : rooms) {
+							pWriter.println(raum.getName());
+						}			
+					} catch (IOException e) {
+						e.printStackTrace();
+					} finally {
+						if (pWriter != null) {
+							pWriter.close();
+						}
+					}
+					
+					if (gui != null) {
+						gui.addLog("room removed: " + room);
+						gui.FillRoomsList(rooms);
+					}
+					this.sendUpdates();
+					return;
+				}
+			}
+		}
+	}
+
+	public void updateBanList(String login) {
+		//write logs to file
+        try {
+			pWriter = new PrintWriter(new FileWriter("./data/banned.txt", true));
+			pWriter.println(login);			
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (pWriter != null) {
+				pWriter.close();
+			}
+			if (gui != null) {
+				gui.addLog("user:"+ login + " :banned");
+			}
+		}
+		
+	}
+	
+	public void deleteAccount (String login) {
+		//delete aus actual lists
+		//send updates
+		//delete from account.txt
+	}
+
+	public void createLogFile(ArrayList<String> logs) {
+		//create filename
+		DateFormat dateFormat = new SimpleDateFormat("HH-mm-ss_dd-MM-yyyy_");
+		Date date = new Date();
+		String path = "./data/logs/";
+        String name = dateFormat.format(date) + ".txt";
+        
+        //create file
+        File file = new File(path, name);
+        try {
+			file.createNewFile();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+        
+        //write logs to file
+        try {
+			pWriter = new PrintWriter(new FileWriter(path+name));
+			for (String s : logs) {
+				pWriter.println(s);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			if (pWriter != null) {
+				pWriter.close();
+			}
+		}
+	}
+}

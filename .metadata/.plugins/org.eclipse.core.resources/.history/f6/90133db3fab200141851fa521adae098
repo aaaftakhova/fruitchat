@@ -1,0 +1,47 @@
+package client;
+
+import javax.swing.DefaultListModel;
+import javax.swing.JDialog;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import java.awt.BorderLayout;
+import javax.swing.JList;
+import javax.swing.JButton;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+
+public class PrivateChatList extends JDialog {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private String selected;
+
+	public PrivateChatList(DefaultListModel<String> onlineUsers) {
+		getContentPane().setLayout(new BorderLayout(10, 10));
+		
+		JScrollPane scrollPane = new JScrollPane();
+		getContentPane().add(scrollPane, BorderLayout.CENTER);
+		
+		final JList<String> list = new JList<String>(onlineUsers);
+		scrollPane.setViewportView(list);
+		
+		JButton btnOpenPrivateDialog = new JButton("open private dialog");
+		btnOpenPrivateDialog.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				if (list.getSelectedIndex() != -1) {
+					selected = list.getSelectedValue().toString();
+				} else {
+					JOptionPane.showMessageDialog(null, "No user was selected");
+				}
+			}
+		});
+		getContentPane().add(btnOpenPrivateDialog, BorderLayout.SOUTH);
+	}
+
+
+	public static String getUser(DefaultListModel<String> OnlineUsersList) {
+		PrivateChatList list = new PrivateChatList(OnlineUsersList);
+		return list.selected;
+	}
+}
